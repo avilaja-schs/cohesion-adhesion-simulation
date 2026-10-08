@@ -24,6 +24,8 @@
   --chloride: #23893f;
   --copper: #c46a35;
   --good: #1f7a4a;
+  --electron: #c98a00;   /* shared electrons in the close-up */
+  --glass: #d3e6ea;     /* glass surface in the close-up */
   --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   --font-data: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -34,6 +36,7 @@
     --line: #29404a; --accent: #e08a55; --accent-ink: #1a0d05; --water: #58abe6; --hbond: #72b4ff;
     --oxygen: #ff6355; --hydrogen: #f1f5f7; --hstroke: #93a5ad; --covalent: #c9d6dc;
     --sodium: #b18bff; --chloride: #5fd07d; --copper: #d9844f; --good: #5cc98d;
+    --electron: #ffd24a; --glass: #22404a;
     color-scheme: dark;
   }
 }
@@ -42,6 +45,7 @@
   --line: #29404a; --accent: #e08a55; --accent-ink: #1a0d05; --water: #58abe6; --hbond: #72b4ff;
   --oxygen: #ff6355; --hydrogen: #f1f5f7; --hstroke: #93a5ad; --covalent: #c9d6dc;
   --sodium: #b18bff; --chloride: #5fd07d; --copper: #d9844f; --good: #5cc98d;
+    --electron: #ffd24a; --glass: #22404a;
   color-scheme: dark;
 }
 
@@ -119,6 +123,22 @@ details { background: var(--panel); border: 1px solid var(--line); border-radius
 summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; font-size: 18px; }
 details[open] summary { margin-bottom: 12px; }
 .frames { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+/* Close-up (single molecule) panel */
+.closeup { gap: 14px; }
+.cu-body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .cu-body { grid-template-columns: 1fr; } }
+#cuSvg { width: 100%; max-width: 100%; aspect-ratio: 640 / 420; display: block; border-radius: 10px; background: var(--canvas); }
+#cuSvg text { font-family: var(--font-body); fill: var(--ink); }
+#cuSvg .atom-label { font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+#cuSvg .neg { fill: var(--oxygen); font-weight: 700; }
+#cuSvg .pos { fill: var(--hbond); font-weight: 700; }
+#cuSvg .note { fill: var(--muted); font-size: 15px; }
+.cu-steps { display: flex; flex-wrap: wrap; gap: 6px; }
+.cu-steps button { font-size: 14px; padding: 6px 10px; min-height: 36px; }
+.cu-text { display: grid; gap: 12px; min-width: 0; }
+.cu-text h3 { font-size: 20px; }
+.cu-text p { margin: 0; font-size: 18px; line-height: 1.55; }
+.cu-key { margin: 0; padding-left: 18px; font-size: 15px; color: var(--muted); display: grid; gap: 2px; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 </style>
 
@@ -141,7 +161,8 @@ details[open] summary { margin-bottom: 12px; }
       </div>
     </div>
     <div class="view">
-      <div class="view-head"><h2>Molecule zoom</h2><span>Edge of the dome, touching the penny</span></div>
+      <div class="view-head"><h2>Molecule zoom</h2><button class="ghost openCU" type="button">Zoom in closer</button></div>
+      <p class="small">Edge of the dome, touching the penny.</p>
       <canvas id="mol" aria-label="Ball-and-stick water molecules with hydrogen bonds. Salt ions appear when salt is added."></canvas>
       <div class="stats">
         <span class="stat">Water–water hydrogen bonds: <b id="hbCount">0</b></span>
@@ -150,12 +171,36 @@ details[open] summary { margin-bottom: 12px; }
       <div class="legend" aria-label="Legend">
         <span><svg width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="7" fill="var(--oxygen)"/></svg>Oxygen (O)</span>
         <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="var(--hydrogen)" stroke="var(--hstroke)" stroke-width="1.5"/></svg>Hydrogen (H)</span>
-        <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--covalent)" stroke-width="3.5"/></svg>Polar covalent bond</span>
+        <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--covalent)" stroke-width="3.5"/></svg>Polar covalent bond (unequal sharing of electrons)</span>
         <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--hbond)" stroke-width="2.5" stroke-dasharray="5 4"/></svg>Hydrogen bond (cohesion)</span>
         <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--copper)" stroke-width="2.5" stroke-dasharray="1.5 4" stroke-linecap="round"/></svg>Water sticks to penny (adhesion)</span>
         <span><svg width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="var(--sodium)"/></svg>Na⁺</span>
         <span><svg width="20" height="20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--chloride)"/></svg>Cl⁻</span>
         <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--sodium)" stroke-width="2.5" stroke-dasharray="1.5 4" stroke-linecap="round"/></svg>Water holding an ion</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="closeup" class="view closeup" aria-label="Closer zoom" hidden>
+    <div class="view-head"><h2>Closer zoom: one water molecule</h2><button id="cuClose" class="ghost" type="button">Close</button></div>
+    <div class="cu-steps" role="group" aria-label="Jump to a step">
+      <button class="ghost cu-jump" data-step="0" type="button">1 · One molecule</button>
+      <button class="ghost cu-jump" data-step="1" type="button">2 · Electron pull</button>
+      <button class="ghost cu-jump" data-step="2" type="button">3 · Charges</button>
+      <button class="ghost cu-jump" data-step="3" type="button">4 · Cohesion</button>
+      <button class="ghost cu-jump" data-step="4" type="button">5 · Adhesion</button>
+    </div>
+    <div class="cu-body">
+      <svg id="cuSvg" viewBox="0 0 640 420" role="img" aria-labelledby="cuTitle"></svg>
+      <div class="cu-text">
+        <h3 id="cuTitle"></h3>
+        <p id="cuCaption" aria-live="polite"></p>
+        <ul class="cu-key" id="cuKey"></ul>
+        <div class="row">
+          <button id="cuBack" class="ghost" type="button">Back</button>
+          <button id="cuNext" type="button">Next</button>
+          <button id="cuReplay" class="ghost" type="button">Replay</button>
+        </div>
       </div>
     </div>
   </section>
@@ -187,9 +232,10 @@ details[open] summary { margin-bottom: 12px; }
       <div class="label">3 · Molecule zoom</div>
       <div class="row">
         <button id="btnPause" class="ghost" aria-pressed="false" type="button">Pause motion</button>
-        <button id="btnCharges" class="ghost" aria-pressed="false" type="button">Show δ+ and δ−</button>
+        <button id="btnCharges" class="ghost" aria-pressed="false" type="button">Show + and − charges</button>
       </div>
-      <p class="small">δ (delta) means “partly.” O is partly negative (δ−). Each H is partly positive (δ+).</p>
+      <div class="row"><button class="openCU" type="button">Zoom in to one molecule</button></div>
+      <p class="small">These are partial charges. O is partially negative (−). Each H is partially positive (+).</p>
     </div>
   </section>
 
@@ -219,7 +265,7 @@ details[open] summary { margin-bottom: 12px; }
     <div class="vocab">
       <div class="card"><b>Cohesion</b><em>cohesión</em><p>Water molecules sticking to <u>other water molecules</u>.</p></div>
       <div class="card"><b>Adhesion</b><em>adhesión</em><p>Water sticking to a <u>different</u> material, like the penny.</p></div>
-      <div class="card"><b>Hydrogen bond</b><em>puente de hidrógeno</em><p>A weak pull between the H (δ+) of one water molecule and the O (δ−) of another. Dashed line.</p></div>
+      <div class="card"><b>Hydrogen bond</b><em>puente de hidrógeno</em><p>A weak pull between the H (+) of one water molecule and the O (−) of another. Dashed line.</p></div>
       <div class="card"><b>Polar covalent bond</b><em>enlace covalente polar</em><p>A strong bond inside one water molecule. O and H share electrons unequally. Solid line.</p></div>
       <div class="card"><b>Ion</b><em>ion</em><p>An atom with a charge. Salt (NaCl) splits into Na⁺ and Cl⁻ ions in water.</p></div>
       <div class="card"><b>Surface tension</b><em>tensión superficial</em><p>Cohesion at the surface makes water act like a stretchy skin. It holds the dome up.</p></div>
@@ -499,7 +545,7 @@ const SURFACE_Y = 72;          // top of the water
 const CU_Y = 372;              // copper atom centers
 const waters = [];
 const copper = [];
-let ions = [], bonds = [], ionPool = [], lastRebond = -1e9;
+let ions = [], bonds = [], lastRebond = -1e9;
 
 // Build a jiggly hexagonal arrangement of water molecules
 (function buildLattice() {
@@ -514,27 +560,33 @@ let ions = [], bonds = [], ionPool = [], lastRebond = -1e9;
   waters.forEach(w => { w.bottom = w.row === lastRow; w.tth = w.th; });
   for (let x = 12; x < W; x += 24) copper.push({ x, y: CU_Y });
 
-  // Pick ion sites spread out, away from the top surface and the copper
-  const candidates = waters.filter(w => w.row > 0 && w.row < lastRow).sort(() => Math.random() - 0.5);
-  for (const minGap of [2.2, 1.7, 1.2]) {
-    for (const w of candidates) {
-      if (ionPool.includes(w)) continue;
-      if (ionPool.every(o => Math.hypot(o.hx - w.hx, o.hy - w.hy) > minGap * SP)) ionPool.push(w);
-      if (ionPool.length >= 3 * ION_PAIRS_PER_SCOOP * 2) break;
-    }
-    if (ionPool.length >= 3 * ION_PAIRS_PER_SCOOP * 2) break;
-  }
 })();
+
+// Pick n random ion sites, spread out, away from the top surface and the copper.
+// Called every time the salt changes, so the ions land somewhere new each scoop.
+function pickIonSites(n) {
+  const lastRow = Math.max(...waters.map(w => w.row));
+  const candidates = waters.filter(w => w.row > 0 && w.row < lastRow).sort(() => Math.random() - 0.5);
+  const sites = [];
+  for (const minGap of [2.2, 1.7, 1.2, 0]) {
+    for (const w of candidates) {
+      if (sites.length >= n) return sites;
+      if (sites.includes(w)) continue;
+      if (sites.every(o => Math.hypot(o.hx - w.hx, o.hy - w.hy) > minGap * SP)) sites.push(w);
+    }
+  }
+  return sites;
+}
 
 // Place ions for the current salt level and assign "hydration shells"
 function placeIons(now) {
   const n = state.salt * ION_PAIRS_PER_SCOOP * 2;
-  const old = ions;
   waters.forEach(w => { w.hidden = false; w.shell = null; });
-  ions = ionPool.slice(0, n).map((site, k) => {
+  // half Na+, half Cl-, shuffled so neither type has a favorite spot
+  const types = Array.from({ length: n }, (_, k) => k % 2 ? 'Cl' : 'Na').sort(() => Math.random() - 0.5);
+  ions = pickIonSites(n).map((site, k) => {
     site.hidden = true; // the ion takes this water's spot
-    const prev = old.find(o => o.site === site);
-    return { site, type: k % 2 ? 'Cl' : 'Na', born: prev ? prev.born : now, x: site.hx, y: site.hy };
+    return { site, type: types[k], born: now, x: site.hx, y: site.hy };
   });
   // each ion grabs its nearest free water molecules
   for (const ion of ions) {
@@ -597,8 +649,8 @@ function stepMolecules(now, dt) {
     w.y = w.hy + amp * Math.cos(t * 0.8 + w.p2) + amp * 0.5 * Math.sin(t * 1.6 + w.p1);
     if (w.shell) {
       const ang = Math.atan2(w.y - w.shell.y, w.x - w.shell.x);
-      // Na+ : oxygen (δ−) faces the ion, so the H's point away.
-      // Cl− : one hydrogen (δ+) points straight at the ion.
+      // Na+ : oxygen (−) faces the ion, so the H's point away.
+      // Cl− : one hydrogen (+) points straight at the ion.
       w.tth = w.shell.type === 'Na' ? ang : ang + Math.PI + HALF;
     }
     let diff = Math.atan2(Math.sin(w.tth - w.th), Math.cos(w.tth - w.th));
@@ -681,10 +733,10 @@ function drawMolecules(now) {
     if (state.charges) {
       ctx.font = '700 10px ' + getFont('--font-body'); ctx.textAlign = 'center'; ctx.fillStyle = C.ink;
       const bis = w.th + Math.PI; // opposite the H's
-      ctx.fillText('δ−', a.O.x + 15 * Math.cos(bis), a.O.y + 15 * Math.sin(bis) + 4);
+      ctx.fillText('−', a.O.x + 15 * Math.cos(bis), a.O.y + 15 * Math.sin(bis) + 4);
       for (const h of a.H) {
         const ang = Math.atan2(h.y - a.O.y, h.x - a.O.x);
-        ctx.fillText('δ+', h.x + 11 * Math.cos(ang), h.y + 11 * Math.sin(ang) + 4);
+        ctx.fillText('+', h.x + 11 * Math.cos(ang), h.y + 11 * Math.sin(ang) + 4);
       }
     }
   }
@@ -745,7 +797,7 @@ function explanation() {
       'This pull between water molecules is <b>cohesion</b>. At the surface, cohesion acts like a stretchy skin that holds the dome up until it gets too big and spills.';
   }
   return adhesion + `You added ${state.salt} scoop${state.salt > 1 ? 's' : ''} of salt. Salt (NaCl) splits into <b>Na⁺</b> and <b>Cl⁻</b> ions in water. ` +
-    'Water molecules turn to hold on to the ions: the O side (δ−) faces Na⁺, and an H side (δ+) faces Cl⁻. ' +
+    'Water molecules turn to hold on to the ions: the O side (−) faces Na⁺, and an H side (+) faces Cl⁻. ' +
     'Those water molecules are busy with ions, so they form fewer hydrogen bonds with each other. In this model, less cohesion means a smaller dome and fewer drops. ' +
     (state.salt < 3 ? 'Add more salt and compare.' : 'This is the most salt the model allows.');
 }
@@ -837,4 +889,247 @@ placeIons(0);
 newTrial();
 renderData();
 requestAnimationFrame(frame);
+</script>
+
+<script>
+/* =====================================================================
+   CLOSER ZOOM: one water molecule, step by step
+   Step 0  one molecule, electrons shared (shown evenly to start)
+   Step 1  oxygen pulls the shared electrons closer
+   Step 2  that uneven sharing makes − (O) and + (H)
+   Step 3  a second molecule arrives: hydrogen bond = cohesion
+   Step 4  a glass surface arrives: water sticks to it = adhesion
+   Drawn as SVG (crisp labels) and re-rendered each frame while open.
+   Every value in `cur` eases toward the step's target values in `tgt`.
+   ===================================================================== */
+(function () {
+  const svg = $('cuSvg');
+  const D = Math.PI / 180;
+  const HALF_DEG = 52.25;              // half of 104.5°
+  const BOND = 80;                     // O–H length at scale 1 (drawn longer than real so electrons are visible)
+  const RO = 30, RH = 18;              // atom radii at scale 1
+  const GLASS_TOP = 350;               // y of glass surface atoms
+
+  const STEPS = [
+    { title: 'One water molecule (H₂O)',
+      text: 'Water has 1 oxygen atom (O) and 2 hydrogen atoms (H). Each line is a covalent bond. In a covalent bond, two atoms share a pair of electrons (e⁻). Here the electrons are drawn halfway, as if the sharing were equal.',
+      key: ['Red ball = oxygen (O)', 'White ball = hydrogen (H)', 'Gold dots = shared electrons (e⁻)'] },
+    { title: 'Oxygen pulls harder',
+      text: 'Oxygen pulls on electrons much harder than hydrogen does. Scientists say oxygen is more electronegative. Watch the shared electrons move closer to O. They spend more of their time near oxygen. This is unequal sharing of electrons.',
+      key: ['Oxygen has 8 protons pulling on electrons. Hydrogen has 1.', 'The arrows show the pull toward O.'] },
+    { title: 'Uneven sharing makes charges',
+      text: 'Electrons are negative. More electron time near O makes the O side partially negative (−). The H sides get less electron time, so they are partially positive (+). Unequal sharing like this is a polar covalent bond.',
+      key: ['The + and − on water are partial charges.', 'They are small charges, not full charges like Na⁺ or Cl⁻.', 'Polar covalent bond = unequal sharing of electrons.', 'Polar = having a negative end and a positive end.'] },
+    { title: 'Two molecules: cohesion',
+      text: 'Here comes a second water molecule. Opposites attract: the H (+) of one molecule is pulled toward the O (−) of the other. This attraction is a hydrogen bond, drawn as a dashed line. Water sticking to water is cohesion.',
+      key: ['Solid line = polar covalent bond (inside one molecule, strong)', 'Dashed line = hydrogen bond (between molecules, weaker)', 'Cohesion holds the dome together on the penny.'] },
+    { title: 'A surface: adhesion',
+      text: 'Now add a glass surface, like the inside of a beaker. The oxygen atoms on the glass are partially negative (−). Water’s H (+) is attracted to them, so the water molecule sticks to the glass. Water sticking to a different material is adhesion.',
+      key: ['Water still holds on to water (cohesion).', 'Water also holds on to the glass (adhesion).', 'On the penny, adhesion helps the first drops spread across the copper.'] }
+  ];
+
+  // Target values for each step
+  function targets(s) {
+    const single = { ax: 320, ay: 165, ath: 90, sc: 1.55 };
+    const pair = { ax: 230, ay: 170, ath: HALF_DEG, sc: 1 };
+    return Object.assign({}, s <= 2 ? single : pair, {
+      e: s === 0 ? 0.5 : 0.8,          // where electrons sit: 0.5 = halfway, 1 = at O
+      cloud: s === 0 ? 0 : 1,          // electron "crowding" glow around O
+      pull: s === 1 ? 1 : 0,           // arrows toward O
+      charges: s >= 2 ? 1 : 0,
+      bx: s >= 3 ? 425 : 760,          // second molecule x position
+      glass: s >= 4 ? 0 : 140,         // glass offset below its resting place
+      labels: s <= 2 ? 1 : 0           // big single-molecule labels
+    });
+  }
+  // Where each step's animation starts when entered or replayed
+  function startState(s) {
+    const t = targets(s);
+    if (s === 0) return t;
+    if (s === 1) return Object.assign({}, t, { e: 0.5, cloud: 0 });
+    if (s === 2) return Object.assign({}, t, { charges: 0 });
+    if (s === 3) return Object.assign({}, targets(2), { bx: 760, pull: 0 });
+    return Object.assign({}, t, { glass: 140 });
+  }
+
+  let step = 0, cur = startState(0), tgt = targets(0), running = false, last = 0, clock = 0;
+
+  // ---- geometry helpers ----
+  function mol(x, y, thDeg, sc) {
+    const th = thDeg * D, h = HALF_DEG * D, L = BOND * sc;
+    return { O: { x, y }, H: [
+      { x: x + L * Math.cos(th - h), y: y + L * Math.sin(th - h) },
+      { x: x + L * Math.cos(th + h), y: y + L * Math.sin(th + h) }], th, sc };
+  }
+  const lerp = (a, b, f) => ({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f });
+  const f1 = n => n.toFixed(1);
+  function trimLine(a, b, ra, rb) {
+    const d = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / d, uy = (b.y - a.y) / d;
+    return [a.x + ux * ra, a.y + uy * ra, b.x - ux * rb, b.y - uy * rb].map(f1);
+  }
+
+  // ---- draw one water molecule ----
+  function drawWater(m, opts) {
+    const { sc } = m, ro = RO * sc, rh = RH * sc;
+    let out = '';
+    // electron crowding glow: red around O, blue around H (shows where electrons spend time)
+    if (opts.cloud > 0.01) {
+      out += `<circle cx="${f1(m.O.x)}" cy="${f1(m.O.y)}" r="${f1(ro * 1.9)}" fill="url(#gNeg)" opacity="${f1(opts.cloud)}"/>`;
+      for (const H of m.H) out += `<circle cx="${f1(H.x)}" cy="${f1(H.y)}" r="${f1(rh * 1.8)}" fill="url(#gPos)" opacity="${f1(opts.cloud * 0.8)}"/>`;
+    }
+    // polar covalent bonds (solid)
+    for (const H of m.H) out += `<line x1="${f1(m.O.x)}" y1="${f1(m.O.y)}" x2="${f1(H.x)}" y2="${f1(H.y)}" stroke="var(--covalent)" stroke-width="${f1(6 * sc)}" stroke-linecap="round"/>`;
+    // atoms
+    for (const H of m.H) {
+      out += `<circle cx="${f1(H.x)}" cy="${f1(H.y)}" r="${f1(rh)}" fill="var(--hydrogen)" stroke="var(--hstroke)" stroke-width="2"/>`;
+      out += `<text class="atom-label" x="${f1(H.x)}" y="${f1(H.y)}" font-size="${f1(16 * sc)}" style="fill:#10242e">H</text>`;
+    }
+    out += `<circle cx="${f1(m.O.x)}" cy="${f1(m.O.y)}" r="${f1(ro)}" fill="var(--oxygen)"/>`;
+    out += `<text class="atom-label" x="${f1(m.O.x)}" y="${f1(m.O.y)}" font-size="${f1(22 * sc)}" style="fill:#ffffff">O</text>`;
+    // shared electrons: 2 per bond, sitting at fraction e from H toward O
+    if (opts.electrons) {
+      m.H.forEach((H, i) => {
+        const dx = m.O.x - H.x, dy = m.O.y - H.y, d = Math.hypot(dx, dy), nx = -dy / d, ny = dx / d;
+        for (const side of [-1, 1]) {
+          const jig = reduceMotion ? 0 : 0.035 * Math.sin(clock * 3 + i * 2 + side);
+          // keep electrons between the atom edges so they never hide under a ball
+          const fMin = (rh + 4) / d, fMax = 1 - (ro + 5) / d;
+          const f = fMin + (fMax - fMin) * Math.min(1, Math.max(0, opts.e + jig));
+          const p = lerp(H, m.O, f);
+          out += `<circle cx="${f1(p.x + nx * 7 * side * sc)}" cy="${f1(p.y + ny * 7 * side * sc)}" r="${f1(5 * sc)}" fill="var(--electron)" stroke="var(--ink)" stroke-width="1"/>`;
+        }
+      });
+    }
+    // partial charges
+    if (opts.charges > 0.01) {
+      const back = opts.oAngle ?? m.th + Math.PI;
+      out += `<text class="neg" text-anchor="middle" dominant-baseline="central" x="${f1(m.O.x + (ro + 22 * sc) * Math.cos(back))}" y="${f1(m.O.y + (ro + 22 * sc) * Math.sin(back))}" font-size="${f1(22 * sc)}" opacity="${f1(opts.charges)}">−</text>`;
+      m.H.forEach((H, i) => {
+        const a = opts.hAngles?.[i] ?? Math.atan2(H.y - m.O.y, H.x - m.O.x), r = rh + 18 * sc;
+        out += `<text class="pos" text-anchor="middle" dominant-baseline="central" x="${f1(H.x + r * Math.cos(a))}" y="${f1(H.y + r * Math.sin(a))}" font-size="${f1(20 * sc)}" opacity="${f1(opts.charges)}">+</text>`;
+      });
+    }
+    return out;
+  }
+
+  // ---- draw the whole scene ----
+  function render() {
+    const c = cur;
+    const A = mol(c.ax, c.ay, c.ath, c.sc);
+    const B = mol(c.bx, 170, 0, 1);
+    let out = `<defs>
+      <radialGradient id="gNeg"><stop offset="0" style="stop-color:var(--oxygen);stop-opacity:.45"/><stop offset="1" style="stop-color:var(--oxygen);stop-opacity:0"/></radialGradient>
+      <radialGradient id="gPos"><stop offset="0" style="stop-color:var(--hbond);stop-opacity:.35"/><stop offset="1" style="stop-color:var(--hbond);stop-opacity:0"/></radialGradient>
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--electron)"/></marker>
+    </defs>`;
+
+    // glass surface (step 5)
+    const gy = GLASS_TOP + c.glass;
+    let adhesionTarget = null;
+    if (c.glass < 139) {
+      out += `<rect x="0" y="${f1(gy - 4)}" width="640" height="${f1(430 - gy)}" fill="var(--glass)"/>`;
+      // the surface O that the water's lower H points at
+      const H1 = A.H[1], dirx = H1.x - A.O.x, diry = H1.y - A.O.y;
+      const k = (GLASS_TOP - A.O.y) / diry, x0 = A.O.x + dirx * k;
+      for (let i = -3; i <= 6; i++) {
+        const ox = x0 + i * 84, sx = ox + 42;
+        out += `<circle cx="${f1(sx)}" cy="${f1(gy + 18)}" r="17" fill="var(--hstroke)"/><text class="atom-label" x="${f1(sx)}" y="${f1(gy + 18)}" font-size="13" style="fill:#ffffff">Si</text>`;
+        out += `<circle cx="${f1(ox)}" cy="${f1(gy)}" r="15" fill="var(--oxygen)"/><text class="atom-label" x="${f1(ox)}" y="${f1(gy)}" font-size="13" style="fill:#ffffff">O</text>`;
+        if (i === 0) adhesionTarget = { x: ox, y: gy };
+      }
+      out += `<text class="note" x="630" y="410" text-anchor="end">glass surface</text>`;
+      if (adhesionTarget) out += `<text class="neg" x="${f1(adhesionTarget.x - 26)}" y="${f1(gy + 2)}" text-anchor="end" font-size="17">−</text>`;
+    }
+
+    // hydrogen bond A → B (cohesion), appears once B has arrived
+    const hbA = Math.max(0, 1 - Math.abs(c.bx - 425) / 30);
+    if (hbA > 0.01) {
+      const [x1, y1, x2, y2] = trimLine(A.H[0], B.O, RH + 3, RO + 3);
+      out += `<g opacity="${f1(hbA)}"><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--hbond)" stroke-width="4" stroke-dasharray="9 7"/>
+        <text x="${f1((+x1 + +x2) / 2)}" y="${f1(+y1 + 34)}" text-anchor="middle" font-size="15" font-weight="700" style="fill:var(--hbond)">hydrogen bond</text>
+        <text x="${f1((+x1 + +x2) / 2)}" y="${f1(+y1 + 52)}" text-anchor="middle" font-size="15" class="note">= cohesion</text></g>`;
+    }
+    // adhesion A → glass
+    const adA = adhesionTarget ? Math.max(0, 1 - c.glass / 15) : 0;
+    if (adA > 0.01) {
+      const [x1, y1, x2, y2] = trimLine(A.H[1], adhesionTarget, RH + 3, 18);
+      out += `<g opacity="${f1(adA)}"><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--copper)" stroke-width="4" stroke-dasharray="9 7"/>
+        <text x="${f1(+x1 - 22)}" y="${f1((+y1 + +y2) / 2)}" text-anchor="end" font-size="15" font-weight="700" style="fill:var(--copper)">sticks to glass</text>
+        <text x="${f1(+x1 - 22)}" y="${f1((+y1 + +y2) / 2 + 18)}" text-anchor="end" font-size="15" class="note">= adhesion</text></g>`;
+    }
+
+    // pull arrows toward O (step 2)
+    if (c.pull > 0.01) {
+      for (const H of A.H) {
+        const a = lerp(H, A.O, 0.15), b = lerp(H, A.O, 0.5);
+        const dx = A.O.x - H.x, dy = A.O.y - H.y, d = Math.hypot(dx, dy), nx = -dy / d * 34, ny = dx / d * 34;
+        const side = H === A.H[0] ? 1 : -1;
+        out += `<line x1="${f1(a.x + nx * side)}" y1="${f1(a.y + ny * side)}" x2="${f1(b.x + nx * side)}" y2="${f1(b.y + ny * side)}" stroke="var(--electron)" stroke-width="4" marker-end="url(#arrow)" opacity="${f1(c.pull)}"/>`;
+      }
+      out += `<text x="320" y="36" text-anchor="middle" font-size="17" font-weight="700" opacity="${f1(c.pull)}">O pulls the shared electrons closer</text>`;
+    }
+
+    // when two molecules sit side by side, move the facing + / − labels out of the gap between them
+    const paired = c.sc < 1.2;
+    out += drawWater(A, { cloud: c.cloud, e: c.e, electrons: true, charges: c.charges, hAngles: paired ? [-Math.PI / 2, 0] : null });
+    if (c.bx < 700) out += drawWater(B, { cloud: c.cloud, e: c.e, electrons: true, charges: c.charges, oAngle: -2 * Math.PI / 3 });
+
+    // labels for the single big molecule
+    if (c.labels > 0.01) {
+      const mid = lerp(A.O, A.H[1], 0.5);
+      const name = step >= 2 ? 'polar covalent bond' : 'covalent bond (shared electrons)';
+      out += `<g opacity="${f1(c.labels)}">
+        <line x1="120" y1="142" x2="${f1(mid.x - 4)}" y2="${f1(mid.y - 4)}" stroke="var(--muted)" stroke-width="1.5"/>
+        <text x="24" y="112" font-size="17" font-weight="700">${name}</text>
+        ${step >= 1 ? `<text x="24" y="132" font-size="15" class="note">${step >= 2 ? '= unequal sharing of electrons' : 'electrons are shared unequally'}</text>` : ''}
+        <text x="470" y="184" font-size="15" class="note">shared electrons (e⁻)</text>
+        <line x1="466" y1="180" x2="${f1(lerp(A.H[0], A.O, 0.55).x + 14)}" y2="${f1(lerp(A.H[0], A.O, 0.55).y - 10)}" stroke="var(--muted)" stroke-width="1.5"/>
+        <text x="470" y="104" font-size="15" class="note">oxygen</text>
+        <line x1="466" y1="100" x2="${f1(A.O.x + RO * c.sc * 0.8)}" y2="${f1(A.O.y - RO * c.sc * 0.6)}" stroke="var(--muted)" stroke-width="1.5"/>
+        <text x="${f1(A.H[1].x)}" y="340" text-anchor="middle" font-size="15" class="note">hydrogen</text>
+        <line x1="${f1(A.H[1].x)}" y1="324" x2="${f1(A.H[1].x)}" y2="${f1(A.H[1].y + RH * c.sc + 3)}" stroke="var(--muted)" stroke-width="1.5"/>
+      </g>`;
+      if (step >= 2) out += `<text x="320" y="36" text-anchor="middle" font-size="16" class="note" opacity="${f1(c.charges)}">Shared electrons spend more time near oxygen → oxygen is partially negative.</text>`;
+    }
+    svg.innerHTML = out;
+  }
+
+  // ---- animation loop (runs only while the panel is open) ----
+  function tick(now) {
+    if (!running) return;
+    const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now; clock += dt;
+    const k = reduceMotion ? 1 : Math.min(1, dt * 2.2);
+    for (const key in tgt) cur[key] += (tgt[key] - cur[key]) * k;
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function go(s, replay) {
+    step = Math.max(0, Math.min(STEPS.length - 1, s));
+    if (replay || s === 0) cur = startState(step);
+    tgt = targets(step);
+    const st = STEPS[step];
+    $('cuTitle').textContent = `Step ${step + 1} of ${STEPS.length}: ${st.title}`;
+    $('cuCaption').textContent = st.text;
+    $('cuKey').innerHTML = st.key.map(k => `<li>${k}</li>`).join('');
+    $('cuBack').disabled = step === 0;
+    $('cuNext').disabled = step === STEPS.length - 1;
+    document.querySelectorAll('.cu-jump').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.step === step)));
+  }
+
+  function open() {
+    $('closeup').hidden = false;
+    go(0, true);
+    if (!running) { running = true; last = performance.now(); requestAnimationFrame(tick); }
+    $('closeup').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  }
+  function close() { $('closeup').hidden = true; running = false; }
+
+  document.querySelectorAll('.openCU').forEach(b => b.onclick = open);
+  $('cuClose').onclick = close;
+  $('cuNext').onclick = () => go(step + 1, true);
+  $('cuBack').onclick = () => go(step - 1, false);
+  $('cuReplay').onclick = () => go(step, true);
+  document.querySelectorAll('.cu-jump').forEach(b => b.onclick = () => go(+b.dataset.step, true));
+})();
 </script>
