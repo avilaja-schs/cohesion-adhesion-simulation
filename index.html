@@ -1,0 +1,840 @@
+<title>Drops on a Penny</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a lab bench. Left = what you see (penny + dropper), right = what you'd see
+   with a molecular microscope. Controls sit under both; the lab data table + chart below. */
+:root {
+  --bg: #e9f0f2;        /* cool lab-bench grey-blue */
+  --panel: #ffffff;
+  --canvas: #f6fafb;
+  --ink: #10242e;
+  --muted: #4c636d;
+  --line: #c6d4d9;
+  --accent: #a9532a;    /* penny copper: buttons, highlights */
+  --accent-ink: #ffffff;
+  --water: #2f86cc;
+  --hbond: #1d64c9;
+  --oxygen: #d2372c;
+  --hydrogen: #ffffff;
+  --hstroke: #6a7c84;
+  --covalent: #33454d;
+  --sodium: #7448cc;
+  --chloride: #23893f;
+  --copper: #c46a35;
+  --good: #1f7a4a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d181d; --panel: #14242b; --canvas: #0f1f26; --ink: #e2edf1; --muted: #9bb2ba;
+    --line: #29404a; --accent: #e08a55; --accent-ink: #1a0d05; --water: #58abe6; --hbond: #72b4ff;
+    --oxygen: #ff6355; --hydrogen: #f1f5f7; --hstroke: #93a5ad; --covalent: #c9d6dc;
+    --sodium: #b18bff; --chloride: #5fd07d; --copper: #d9844f; --good: #5cc98d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d181d; --panel: #14242b; --canvas: #0f1f26; --ink: #e2edf1; --muted: #9bb2ba;
+  --line: #29404a; --accent: #e08a55; --accent-ink: #1a0d05; --water: #58abe6; --hbond: #72b4ff;
+  --oxygen: #ff6355; --hydrogen: #f1f5f7; --hstroke: #93a5ad; --covalent: #c9d6dc;
+  --sodium: #b18bff; --chloride: #5fd07d; --copper: #d9844f; --good: #5cc98d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px; display: grid; gap: 20px; }
+
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--font-data); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(30px, 5vw, 46px); line-height: 1.05; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; margin: 0; }
+.lede { margin: 0; color: var(--muted); max-width: 68ch; }
+
+.stage { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .stage { grid-template-columns: 1fr; } }
+.view { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.view-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.view-head span { color: var(--muted); font-size: 14px; }
+canvas { width: 100%; max-width: 100%; aspect-ratio: 3 / 2; display: block; border-radius: 10px; background: var(--canvas); }
+
+.stats { display: flex; gap: 8px 18px; flex-wrap: wrap; font-size: 15px; }
+.stat b { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: 18px; }
+
+/* Legend for the molecule view */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { flex: none; }
+
+/* Controls */
+.controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 860px) { .controls { grid-template-columns: 1fr; } }
+.group { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.label { font-family: var(--font-data); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button {
+  font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+  padding: 10px 14px; border-radius: 10px; border: 2px solid var(--accent);
+  background: var(--accent); color: var(--accent-ink); min-height: 44px;
+}
+button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+button[aria-pressed="true"].ghost { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible, summary:focus-visible { outline: 3px solid var(--hbond); outline-offset: 2px; }
+.salt-dots { display: inline-flex; gap: 5px; }
+.salt-dots i { width: 14px; height: 14px; border-radius: 3px; border: 2px solid var(--muted); display: inline-block; }
+.salt-dots i.on { background: var(--ink); border-color: var(--ink); }
+.small { font-size: 14px; color: var(--muted); margin: 0; }
+
+.status { background: var(--panel); border: 1px solid var(--line); border-left: 6px solid var(--water); border-radius: 12px; padding: 12px 16px; font-size: 17px; }
+.status.spill { border-left-color: var(--accent); }
+
+.explain { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 8px; }
+.explain p { margin: 0; max-width: 72ch; }
+
+/* Data section */
+.data { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; }
+@media (max-width: 860px) { .data { grid-template-columns: 1fr; } }
+.table-wrap { overflow-x: auto; max-height: 320px; overflow-y: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-data); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); position: sticky; top: 0; background: var(--panel); }
+td.num { font-family: var(--font-data); }
+.empty { color: var(--muted); font-style: italic; }
+#chart text { fill: var(--muted); font-family: var(--font-data); font-size: 12px; }
+#chart .val { fill: var(--ink); font-size: 13px; }
+
+/* Vocab + sentence frames */
+.vocab { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; }
+.card b { font-family: var(--font-display); font-size: 17px; }
+.card em { color: var(--muted); font-size: 14px; }
+.card p { margin: 0; font-size: 15px; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; }
+summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; font-size: 18px; }
+details[open] summary { margin-bottom: 12px; }
+.frames { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Marine &amp; 9th grade Biology · Properties of water</div>
+    <h1>Drops on a Penny</h1>
+    <p class="lede">Drip water onto a penny and count how many drops it holds before it spills. Then add salt and try again. The right side zooms in so you can see the molecules.</p>
+  </header>
+
+  <div id="status" class="status" role="status" aria-live="polite">Press <b>Add 1 drop</b> or <b>Drip until it spills</b> to start Trial 1.</div>
+
+  <section class="stage" aria-label="Simulation">
+    <div class="view">
+      <div class="view-head"><h2>On the lab bench</h2><span id="solutionName">Fresh water</span></div>
+      <canvas id="bench" aria-label="Side view of a dropper above a penny. Water forms a dome on the penny."></canvas>
+      <div class="stats">
+        <span class="stat">Drops on penny: <b id="dropCount">0</b></span>
+        <span class="stat">Cohesion (model): <b id="cohesionPct">100%</b></span>
+      </div>
+    </div>
+    <div class="view">
+      <div class="view-head"><h2>Molecule zoom</h2><span>Edge of the dome, touching the penny</span></div>
+      <canvas id="mol" aria-label="Ball-and-stick water molecules with hydrogen bonds. Salt ions appear when salt is added."></canvas>
+      <div class="stats">
+        <span class="stat">Water–water hydrogen bonds: <b id="hbCount">0</b></span>
+        <span class="stat">Water molecules holding ions: <b id="shellCount">0</b></span>
+      </div>
+      <div class="legend" aria-label="Legend">
+        <span><svg width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="7" fill="var(--oxygen)"/></svg>Oxygen (O)</span>
+        <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="var(--hydrogen)" stroke="var(--hstroke)" stroke-width="1.5"/></svg>Hydrogen (H)</span>
+        <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--covalent)" stroke-width="3.5"/></svg>Polar covalent bond</span>
+        <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--hbond)" stroke-width="2.5" stroke-dasharray="5 4"/></svg>Hydrogen bond (cohesion)</span>
+        <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--copper)" stroke-width="2.5" stroke-dasharray="1.5 4" stroke-linecap="round"/></svg>Water sticks to penny (adhesion)</span>
+        <span><svg width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="var(--sodium)"/></svg>Na⁺</span>
+        <span><svg width="20" height="20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="var(--chloride)"/></svg>Cl⁻</span>
+        <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--sodium)" stroke-width="2.5" stroke-dasharray="1.5 4" stroke-linecap="round"/></svg>Water holding an ion</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="controls" aria-label="Controls">
+    <div class="group">
+      <div class="label">1 · Your solution</div>
+      <div class="row">
+        <button id="btnFresh" class="ghost" type="button">Fresh water</button>
+        <button id="btnSalt" type="button">Add a scoop of salt</button>
+      </div>
+      <div class="row small">Salt: <span class="salt-dots" id="saltDots" aria-hidden="true"><i></i><i></i><i></i></span> <span id="saltText">0 of 3 scoops</span></div>
+      <p class="small">Changing the solution wipes the penny dry for a new trial.</p>
+    </div>
+    <div class="group">
+      <div class="label">2 · The penny</div>
+      <div class="row">
+        <button id="btnDrop" type="button">Add 1 drop</button>
+        <button id="btnAuto" type="button">Drip until it spills</button>
+        <button id="btnWipe" class="ghost" type="button">Wipe penny</button>
+      </div>
+      <div class="row small" role="group" aria-label="Drip speed">Speed:
+        <button class="ghost speed" data-speed="slow" aria-pressed="false" type="button">Slow</button>
+        <button class="ghost speed" data-speed="normal" aria-pressed="true" type="button">Normal</button>
+        <button class="ghost speed" data-speed="fast" aria-pressed="false" type="button">Fast</button>
+      </div>
+    </div>
+    <div class="group">
+      <div class="label">3 · Molecule zoom</div>
+      <div class="row">
+        <button id="btnPause" class="ghost" aria-pressed="false" type="button">Pause motion</button>
+        <button id="btnCharges" class="ghost" aria-pressed="false" type="button">Show δ+ and δ−</button>
+      </div>
+      <p class="small">δ (delta) means “partly.” O is partly negative (δ−). Each H is partly positive (δ+).</p>
+    </div>
+  </section>
+
+  <section class="explain" aria-live="polite">
+    <h2>What's happening?</h2>
+    <p id="explainText"></p>
+  </section>
+
+  <section class="data" aria-label="Lab data">
+    <div class="view">
+      <div class="view-head"><h2>Data table</h2><button id="btnClear" class="ghost" type="button">Clear data</button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Trial</th><th>Salt (scoops)</th><th>Drops held</th></tr></thead>
+          <tbody id="tbody"><tr><td colspan="3" class="empty">No trials yet. Your results appear here when the penny spills.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="view">
+      <div class="view-head"><h2>Average drops held</h2><span>by scoops of salt</span></div>
+      <svg id="chart" viewBox="0 0 480 260" role="img" aria-label="Bar chart of average drops held for each salt level"></svg>
+    </div>
+  </section>
+
+  <details>
+    <summary>Word bank (with Spanish)</summary>
+    <div class="vocab">
+      <div class="card"><b>Cohesion</b><em>cohesión</em><p>Water molecules sticking to <u>other water molecules</u>.</p></div>
+      <div class="card"><b>Adhesion</b><em>adhesión</em><p>Water sticking to a <u>different</u> material, like the penny.</p></div>
+      <div class="card"><b>Hydrogen bond</b><em>puente de hidrógeno</em><p>A weak pull between the H (δ+) of one water molecule and the O (δ−) of another. Dashed line.</p></div>
+      <div class="card"><b>Polar covalent bond</b><em>enlace covalente polar</em><p>A strong bond inside one water molecule. O and H share electrons unequally. Solid line.</p></div>
+      <div class="card"><b>Ion</b><em>ion</em><p>An atom with a charge. Salt (NaCl) splits into Na⁺ and Cl⁻ ions in water.</p></div>
+      <div class="card"><b>Surface tension</b><em>tensión superficial</em><p>Cohesion at the surface makes water act like a stretchy skin. It holds the dome up.</p></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Sentence frames for your lab write-up</summary>
+    <ol class="frames">
+      <li>I predict the penny will hold ___ drops of fresh water because ___.</li>
+      <li>With ___ scoops of salt, the penny held an average of ___ drops.</li>
+      <li>As I added more salt, the number of drops ___ (increased / decreased / stayed the same).</li>
+      <li>In the molecule zoom, I saw that water molecules near the ions ___.</li>
+      <li>This is evidence that ___ because ___.</li>
+    </ol>
+  </details>
+</div>
+
+<script>
+/* =====================================================================
+   DROPS ON A PENNY — adhesion & cohesion simulation
+   Two canvases share one "model":
+     - salt (0–3 scoops) sets a cohesion factor for this model
+     - the bench view uses that factor for dome height and drop capacity
+     - the molecule view adds Na+/Cl- ions; water molecules next to an
+       ion turn to face it and stop forming water–water hydrogen bonds
+   All drawing uses a fixed 600 x 400 "logical" coordinate system that
+   is scaled to whatever size the canvas is on screen.
+   ===================================================================== */
+
+// ---------- Model settings (edit these to tune the lab) ----------
+const COHESION_BY_SALT = [1.00, 0.84, 0.70, 0.58]; // model cohesion for 0,1,2,3 scoops
+const BASE_CAPACITY = 42;     // fresh-water drops a penny holds (classroom results are often ~25–45)
+const TRIAL_NOISE = 2;        // each trial varies by up to ±2 drops, like a real lab
+const DRIP_MS = { slow: 1100, normal: 600, fast: 250 }; // pause between drops in auto mode
+const ION_PAIRS_PER_SCOOP = 1; // each scoop adds 1 Na+ and 1 Cl- to the zoom view
+const SHELL_SIZE = 4;          // water molecules each ion "grabs"
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+
+// ---------- Shared state ----------
+const state = {
+  salt: 0,
+  drops: 0,
+  capacity: 0,        // drops this trial can hold (set when a trial starts)
+  spilled: false,
+  auto: false,
+  speed: 'normal',
+  falling: null,      // the drop currently in the air
+  lastLand: 0,
+  landT: -10,         // time of last landing (for the wobble)
+  spillT: 0,          // time the spill started
+  paused: false,
+  charges: false,
+  trials: [],
+  crystals: []        // salt grains falling into the beaker
+};
+
+// Save/load trial data in this browser only (optional convenience)
+try { const saved = JSON.parse(localStorage.getItem('penny-trials') || '[]'); if (Array.isArray(saved)) state.trials = saved; } catch (e) {}
+function saveTrials() { try { localStorage.setItem('penny-trials', JSON.stringify(state.trials)); } catch (e) {} }
+
+// ---------- Theme colors (read from CSS so both light and dark work) ----------
+let C = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['canvas','ink','muted','line','accent','water','hbond','oxygen','hydrogen','hstroke','covalent','sodium','chloride','copper'])
+    C[k] = cs.getPropertyValue('--' + k).trim();
+}
+readColors();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+new MutationObserver(readColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+// ---------- Canvas helpers ----------
+const W = 600, H = 400;
+function setupCanvas(cv) {
+  const ctx = cv.getContext('2d');
+  function fit() {
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(cv.clientWidth * dpr);
+    cv.height = Math.round(cv.clientWidth * dpr * H / W);
+    ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+  }
+  fit();
+  new ResizeObserver(fit).observe(cv);
+  return ctx;
+}
+const bctx = setupCanvas($('bench'));
+const mctx = setupCanvas($('mol'));
+const ease = t => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
+const cohesion = () => COHESION_BY_SALT[state.salt];
+
+/* =====================================================================
+   BENCH VIEW: dropper, penny, water dome
+   ===================================================================== */
+const PEN = { cx: 330, R: 165, top: 316, thick: 14 }; // penny (side view)
+const TIP_Y = 84;                                      // dropper tip
+const BEAKER = { x: 22, y: 232, w: 70, h: 98 };
+
+function newTrial() {
+  state.drops = 0;
+  state.spilled = false;
+  state.falling = null;
+  state.auto = false;
+  const base = Math.round(BASE_CAPACITY * cohesion());
+  state.capacity = base + Math.round((Math.random() * 2 - 1) * TRIAL_NOISE);
+  updateUI();
+}
+
+// Dome shape for a given number of drops. Returns half-width, height, and edge bulge.
+function domeShape(now) {
+  const n = Math.min(state.drops, state.capacity);
+  if (n === 0) return { a: 0, h: 0, bulge: 0 };
+  const hMax = 125 * cohesion();               // stronger cohesion = taller dome
+  const f = n / state.capacity;
+  let h = hMax * Math.pow(f, 0.7);
+  // first few drops spread out (adhesion pulls water across the penny), then the edge "pins"
+  const a = PEN.R * Math.min(1, 0.3 + 0.14 * n);
+  const bulge = 12 * Math.max(0, (f - 0.55) / 0.45) * cohesion();
+  // wobble after each drop lands
+  const dt = (now - state.landT) / 1000;
+  if (!reduceMotion && dt < 1) h *= 1 + 0.035 * Math.sin(dt * 22) * Math.exp(-dt * 5);
+  // after a spill the dome slumps
+  if (state.spilled) h *= 1 - 0.42 * ease((now - state.spillT) / 900);
+  return { a, h, bulge };
+}
+
+function drawBench(now) {
+  const ctx = bctx;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = C.canvas; ctx.fillRect(0, 0, W, H);
+
+  // bench surface
+  const benchY = PEN.top + PEN.thick;
+  ctx.fillStyle = C.line; ctx.fillRect(0, benchY, W, H - benchY);
+
+  drawBeaker(ctx, now);
+
+  // spill puddle on the bench
+  if (state.spilled) {
+    const p = ease((now - state.spillT) / 1200);
+    ctx.fillStyle = withAlpha(C.water, 0.45);
+    ctx.beginPath(); ctx.ellipse(PEN.cx - PEN.R - 4, benchY + 2, 10 + 60 * p, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(PEN.cx + PEN.R + 4, benchY + 2, 10 + 70 * p, 5, 0, 0, Math.PI * 2); ctx.fill();
+    // streams running down the penny edge
+    ctx.fillRect(PEN.cx - PEN.R - 5, PEN.top - 2, 5, PEN.thick + 4);
+    ctx.fillRect(PEN.cx + PEN.R, PEN.top - 2, 5, PEN.thick + 4);
+  }
+
+  // penny body
+  const g = ctx.createLinearGradient(0, PEN.top, 0, benchY);
+  g.addColorStop(0, C.copper); g.addColorStop(1, shade(C.copper, -0.35));
+  ctx.fillStyle = g;
+  roundRect(ctx, PEN.cx - PEN.R, PEN.top, PEN.R * 2, PEN.thick, 5); ctx.fill();
+  ctx.fillStyle = shade(C.copper, 0.25); ctx.fillRect(PEN.cx - PEN.R + 6, PEN.top + 2, PEN.R * 2 - 12, 2);
+
+  // water dome
+  const d = domeShape(now);
+  if (d.h > 0.5) {
+    const L = PEN.cx - d.a, Rr = PEN.cx + d.a, y0 = PEN.top, top = PEN.top - d.h;
+    ctx.beginPath();
+    ctx.moveTo(L, y0);
+    ctx.bezierCurveTo(L - d.bulge, y0 - d.h * 0.85, PEN.cx - d.a * 0.55, top, PEN.cx, top);
+    ctx.bezierCurveTo(PEN.cx + d.a * 0.55, top, Rr + d.bulge, y0 - d.h * 0.85, Rr, y0);
+    ctx.closePath();
+    const wg = ctx.createLinearGradient(0, top, 0, y0);
+    wg.addColorStop(0, withAlpha(C.water, 0.35)); wg.addColorStop(1, withAlpha(C.water, 0.6));
+    ctx.fillStyle = wg; ctx.fill();
+    ctx.strokeStyle = C.water; ctx.lineWidth = 2.5; ctx.stroke();
+    // shine
+    ctx.strokeStyle = withAlpha('#ffffff', 0.6); ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(PEN.cx - d.a * 0.35, top + d.h * 0.45, Math.max(4, d.h * 0.35), Math.PI * 1.15, Math.PI * 1.45); ctx.stroke();
+
+    // magnifier marks where the zoom view is looking (edge of dome on the penny)
+    const mx = Rr - 18, my = y0 - 10;
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(mx, my, 16, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx + 12, my - 12); ctx.lineTo(mx + 30, my - 34); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.font = '600 13px ' + getFont('--font-body'); ctx.textAlign = 'left';
+    ctx.fillText('zoom', mx + 32, my - 36);
+  }
+
+  drawDropper(ctx);
+
+  // falling drop
+  if (state.falling) drawDrop(ctx, PEN.cx, state.falling.y);
+
+  // labels
+  ctx.fillStyle = C.muted; ctx.font = '13px ' + getFont('--font-body'); ctx.textAlign = 'center';
+  ctx.fillText('penny (copper surface)', PEN.cx, benchY + 26);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = C.ink; ctx.font = '800 30px ' + getFont('--font-display');
+  ctx.fillText(state.drops + (state.drops === 1 ? ' drop' : ' drops'), 18, 40);
+}
+
+function drawDropper(ctx) {
+  const x = PEN.cx;
+  // rubber bulb
+  ctx.fillStyle = C.accent;
+  ctx.beginPath(); ctx.ellipse(x, 22, 15, 20, 0, 0, Math.PI * 2); ctx.fill();
+  // glass tube (narrows at tip)
+  ctx.beginPath();
+  ctx.moveTo(x - 9, 34); ctx.lineTo(x + 9, 34); ctx.lineTo(x + 9, 64); ctx.lineTo(x + 3, TIP_Y); ctx.lineTo(x - 3, TIP_Y); ctx.lineTo(x - 9, 64); ctx.closePath();
+  ctx.fillStyle = withAlpha(C.water, 0.35); ctx.fill();
+  ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+function drawDrop(ctx, x, y) {
+  ctx.fillStyle = C.water;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 9);
+  ctx.bezierCurveTo(x + 6, y - 2, x + 6, y + 6, x, y + 6);
+  ctx.bezierCurveTo(x - 6, y + 6, x - 6, y - 2, x, y - 9);
+  ctx.fill();
+}
+
+function drawBeaker(ctx, now) {
+  const b = BEAKER;
+  // liquid
+  ctx.fillStyle = withAlpha(C.water, 0.3 + 0.06 * state.salt);
+  ctx.fillRect(b.x + 3, b.y + 30, b.w - 6, b.h - 33);
+  // glass
+  ctx.strokeStyle = C.muted; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x, b.y + b.h); ctx.lineTo(b.x + b.w, b.y + b.h); ctx.lineTo(b.x + b.w, b.y); ctx.stroke();
+  // salt grains falling in and dissolving
+  state.crystals = state.crystals.filter(c => now - c.t0 < 1400);
+  for (const c of state.crystals) {
+    const t = (now - c.t0) / 1000;
+    const y = Math.min(b.y + b.h - 10, c.y + 260 * t * t);
+    const alpha = t < 0.6 ? 1 : Math.max(0, 1 - (t - 0.6) / 0.8); // dissolves
+    ctx.fillStyle = withAlpha(C.ink, alpha);
+    ctx.fillRect(c.x, y, 4, 4);
+  }
+  ctx.fillStyle = C.muted; ctx.font = '12px ' + getFont('--font-body'); ctx.textAlign = 'center';
+  ctx.fillText(state.salt ? 'salt water' : 'fresh water', b.x + b.w / 2, b.y - 8);
+}
+
+// Drop physics: falls under "gravity", lands on top of the dome
+function stepDrop(now, dt) {
+  if (!state.falling) {
+    if (state.auto && !state.spilled && now - state.lastLand > DRIP_MS[state.speed]) startDrop();
+    return;
+  }
+  const f = state.falling;
+  f.v += 1400 * dt; f.y += f.v * dt;
+  const d = domeShape(now);
+  if (f.y >= PEN.top - d.h - 4) landDrop(now);
+}
+function startDrop() {
+  if (state.spilled || state.falling) return;
+  state.falling = { y: TIP_Y + 6, v: reduceMotion ? 900 : 60 };
+}
+function landDrop(now) {
+  state.falling = null;
+  state.lastLand = now;
+  state.landT = now;
+  state.drops++;
+  if (state.drops > state.capacity) {
+    // this drop broke the surface — record how many the penny HELD
+    state.spilled = true; state.auto = false; state.spillT = now;
+    state.trials.push({ salt: state.salt, drops: state.capacity });
+    saveTrials();
+    setStatus(`It spilled! The penny held <b>${state.capacity} drops</b> of ${solutionLabel().toLowerCase()}. Saved as Trial ${state.trials.length}. Press <b>Wipe penny</b> to run another trial.`, true);
+    renderData();
+  }
+  updateUI();
+}
+
+/* =====================================================================
+   MOLECULE VIEW: ball-and-stick water, hydrogen bonds, ions, copper
+   ===================================================================== */
+const SP = 60;                 // spacing between water molecules
+const OH = 17;                 // O–H bond length (drawn)
+const HALF = 104.5 / 2 * Math.PI / 180; // half of water's 104.5° bond angle
+const SURFACE_Y = 72;          // top of the water
+const CU_Y = 372;              // copper atom centers
+const waters = [];
+const copper = [];
+let ions = [], bonds = [], ionPool = [], lastRebond = -1e9;
+
+// Build a jiggly hexagonal arrangement of water molecules
+(function buildLattice() {
+  let row = 0;
+  for (let y = 108; y <= 340; y += SP * 0.87, row++) {
+    for (let x = 34 + (row % 2 ? SP / 2 : 0); x <= 572; x += SP) {
+      waters.push({ hx: x, hy: y, x, y, row, th: Math.random() * Math.PI * 2, tth: 0,
+        p1: Math.random() * 6.28, p2: Math.random() * 6.28, p3: Math.random() * 6.28, hidden: false, shell: null });
+    }
+  }
+  const lastRow = row - 1;
+  waters.forEach(w => { w.bottom = w.row === lastRow; w.tth = w.th; });
+  for (let x = 12; x < W; x += 24) copper.push({ x, y: CU_Y });
+
+  // Pick ion sites spread out, away from the top surface and the copper
+  const candidates = waters.filter(w => w.row > 0 && w.row < lastRow).sort(() => Math.random() - 0.5);
+  for (const minGap of [2.2, 1.7, 1.2]) {
+    for (const w of candidates) {
+      if (ionPool.includes(w)) continue;
+      if (ionPool.every(o => Math.hypot(o.hx - w.hx, o.hy - w.hy) > minGap * SP)) ionPool.push(w);
+      if (ionPool.length >= 3 * ION_PAIRS_PER_SCOOP * 2) break;
+    }
+    if (ionPool.length >= 3 * ION_PAIRS_PER_SCOOP * 2) break;
+  }
+})();
+
+// Place ions for the current salt level and assign "hydration shells"
+function placeIons(now) {
+  const n = state.salt * ION_PAIRS_PER_SCOOP * 2;
+  const old = ions;
+  waters.forEach(w => { w.hidden = false; w.shell = null; });
+  ions = ionPool.slice(0, n).map((site, k) => {
+    site.hidden = true; // the ion takes this water's spot
+    const prev = old.find(o => o.site === site);
+    return { site, type: k % 2 ? 'Cl' : 'Na', born: prev ? prev.born : now, x: site.hx, y: site.hy };
+  });
+  // each ion grabs its nearest free water molecules
+  for (const ion of ions) {
+    const near = waters.filter(w => !w.hidden && !w.shell)
+      .map(w => ({ w, d: Math.hypot(w.hx - ion.site.hx, w.hy - ion.site.hy) }))
+      .filter(o => o.d < SP * 1.3).sort((a, b) => a.d - b.d).slice(0, SHELL_SIZE);
+    near.forEach(o => { o.w.shell = ion; });
+  }
+  rebond(now); lastRebond = now; // rebuild hydrogen bonds right away
+}
+
+// Hydrogen bonds constantly break and re-form in liquid water.
+// Each free water can donate 2 H-bonds (one per H) and accept 2 (on its O).
+function rebond(now) {
+  const free = waters.filter(w => !w.hidden && !w.shell).sort(() => Math.random() - 0.5);
+  const give = new Map(), take = new Map(), pairs = new Set();
+  const oldKeys = new Map(bonds.map(b => [b.key, b.born]));
+  bonds = [];
+  for (const a of free) {
+    const neighbors = free.filter(b => b !== a && Math.hypot(a.hx - b.hx, a.hy - b.hy) < SP * 1.2).sort(() => Math.random() - 0.5);
+    for (const b of neighbors) {
+      if ((give.get(a) || 0) >= 2) break;
+      const pk = [waters.indexOf(a), waters.indexOf(b)].sort((p, q) => p - q).join('-');
+      if ((take.get(b) || 0) >= 2 || pairs.has(pk)) continue;
+      // a "keeps" most of its old bonds so the picture doesn't flicker
+      const key = waters.indexOf(a) + '>' + waters.indexOf(b);
+      if (!oldKeys.has(key) && Math.random() < 0.35) continue;
+      pairs.add(pk); give.set(a, (give.get(a) || 0) + 1); take.set(b, (take.get(b) || 0) + 1);
+      bonds.push({ donor: a, acceptor: b, key, born: oldKeys.get(key) ?? now });
+    }
+  }
+  // turn each free water so its H atoms point at the molecules it bonds to
+  for (const a of free) {
+    const mine = bonds.filter(b => b.donor === a).map(b => Math.atan2(b.acceptor.hy - a.hy, b.acceptor.hx - a.hx));
+    if (mine.length === 2) a.tth = Math.atan2(Math.sin(mine[0]) + Math.sin(mine[1]), Math.cos(mine[0]) + Math.cos(mine[1]));
+    else if (mine.length === 1) a.tth = mine[0] + HALF;
+    else if (a.bottom) a.tth = Math.PI / 2 + HALF; // point an H down at the penny
+  }
+  $('hbCount').textContent = bonds.length;
+  $('shellCount').textContent = waters.filter(w => w.shell).length;
+}
+
+// Atom positions for one water molecule
+function atoms(w, t) {
+  const wob = reduceMotion ? 0 : 0.12 * Math.sin(t * 1.3 + w.p3);
+  const th = w.th + wob;
+  return {
+    O: { x: w.x, y: w.y },
+    H: [{ x: w.x + OH * Math.cos(th - HALF), y: w.y + OH * Math.sin(th - HALF) },
+        { x: w.x + OH * Math.cos(th + HALF), y: w.y + OH * Math.sin(th + HALF) }]
+  };
+}
+
+function stepMolecules(now, dt) {
+  const t = now / 1000;
+  const amp = reduceMotion ? 0.8 : 3.2;
+  if (now - lastRebond > 2600) { rebond(now); lastRebond = now; }
+  for (const w of waters) {
+    w.x = w.hx + amp * Math.sin(t * 0.9 + w.p1) + amp * 0.5 * Math.sin(t * 1.9 + w.p2);
+    w.y = w.hy + amp * Math.cos(t * 0.8 + w.p2) + amp * 0.5 * Math.sin(t * 1.6 + w.p1);
+    if (w.shell) {
+      const ang = Math.atan2(w.y - w.shell.y, w.x - w.shell.x);
+      // Na+ : oxygen (δ−) faces the ion, so the H's point away.
+      // Cl− : one hydrogen (δ+) points straight at the ion.
+      w.tth = w.shell.type === 'Na' ? ang : ang + Math.PI + HALF;
+    }
+    let diff = Math.atan2(Math.sin(w.tth - w.th), Math.cos(w.tth - w.th));
+    w.th += diff * Math.min(1, dt * 4);
+  }
+  for (const ion of ions) {
+    ion.x = ion.site.hx + amp * 0.6 * Math.sin(t * 0.7 + ion.site.p1);
+    ion.y = ion.site.hy + amp * 0.6 * Math.cos(t * 0.6 + ion.site.p2);
+  }
+}
+
+function drawMolecules(now) {
+  const ctx = mctx, t = now / 1000;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = C.canvas; ctx.fillRect(0, 0, W, H);
+
+  // water region + surface
+  ctx.fillStyle = withAlpha(C.water, 0.1);
+  ctx.beginPath(); ctx.moveTo(0, SURFACE_Y);
+  for (let x = 0; x <= W; x += 20) ctx.lineTo(x, SURFACE_Y + 3 * Math.sin(x / 40 + (reduceMotion ? 0 : t)));
+  ctx.lineTo(W, CU_Y - 12); ctx.lineTo(0, CU_Y - 12); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = withAlpha(C.water, 0.7); ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = C.muted; ctx.font = '13px ' + getFont('--font-body'); ctx.textAlign = 'left';
+  ctx.fillText('air', 12, 26);
+  ctx.fillText('water surface (cohesion makes a “skin”)', 12, SURFACE_Y - 10);
+
+  // copper surface
+  ctx.fillStyle = withAlpha(C.copper, 0.25); ctx.fillRect(0, CU_Y - 12, W, H - CU_Y + 12);
+  for (const c of copper) { ctx.fillStyle = C.copper; ctx.beginPath(); ctx.arc(c.x, c.y, 11, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = C.ink; ctx.font = '600 12px ' + getFont('--font-body'); ctx.textAlign = 'right';
+  ctx.fillText('penny (copper)', W - 10, H - 6);
+
+  const pos = new Map(waters.filter(w => !w.hidden).map(w => [w, atoms(w, t)]));
+
+  // adhesion: bottom-row water molecules attracted to the copper surface
+  dotted(ctx, C.copper, 2.5);
+  for (const w of waters) {
+    if (!w.bottom || w.hidden) continue;
+    const a = pos.get(w); const low = [a.O, ...a.H].sort((p, q) => q.y - p.y)[0];
+    ctx.beginPath(); ctx.moveTo(low.x, low.y + 5); ctx.lineTo(low.x, CU_Y - 12); ctx.stroke();
+  }
+
+  // hydrogen bonds (dashed): H of one water → O of another
+  ctx.lineCap = 'butt';
+  for (const b of bonds) {
+    const A = pos.get(b.donor), B = pos.get(b.acceptor);
+    if (!A || !B) continue;
+    const h = A.H.reduce((p, q) => dist(q, B.O) < dist(p, B.O) ? q : p);
+    const fade = reduceMotion ? 1 : Math.min(1, (now - b.born) / 500);
+    ctx.globalAlpha = fade;
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = C.hbond; ctx.lineWidth = 2.2;
+    const [p, q] = trim(h, B.O, 6, 10);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1; ctx.setLineDash([]);
+
+  // ion–water attraction (dotted, ion color)
+  for (const w of waters) {
+    if (!w.shell || w.hidden) continue;
+    const a = pos.get(w), ion = w.shell;
+    const r = ion.type === 'Na' ? 13 : 18;
+    const from = ion.type === 'Na' ? a.O : a.H.reduce((p, q) => dist(q, ion) < dist(p, ion) ? q : p);
+    const [p, q] = trim(from, ion, ion.type === 'Na' ? 10 : 6, r + 2);
+    dotted(ctx, ion.type === 'Na' ? C.sodium : C.chloride, 2.5);
+    ctx.globalAlpha = ionAlpha(ion, now);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.setLineDash([]);
+
+  // water molecules: solid polar covalent bonds + balls
+  for (const [w, a] of pos) {
+    ctx.strokeStyle = C.covalent; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+    for (const h of a.H) { ctx.beginPath(); ctx.moveTo(a.O.x, a.O.y); ctx.lineTo(h.x, h.y); ctx.stroke(); }
+    for (const h of a.H) {
+      ctx.fillStyle = C.hydrogen; ctx.strokeStyle = C.hstroke; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(h.x, h.y, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = C.oxygen; ctx.beginPath(); ctx.arc(a.O.x, a.O.y, 9, 0, Math.PI * 2); ctx.fill();
+    if (state.charges) {
+      ctx.font = '700 10px ' + getFont('--font-body'); ctx.textAlign = 'center'; ctx.fillStyle = C.ink;
+      const bis = w.th + Math.PI; // opposite the H's
+      ctx.fillText('δ−', a.O.x + 15 * Math.cos(bis), a.O.y + 15 * Math.sin(bis) + 4);
+      for (const h of a.H) {
+        const ang = Math.atan2(h.y - a.O.y, h.x - a.O.x);
+        ctx.fillText('δ+', h.x + 11 * Math.cos(ang), h.y + 11 * Math.sin(ang) + 4);
+      }
+    }
+  }
+
+  // ions
+  for (const ion of ions) {
+    const k = ionAlpha(ion, now), r = (ion.type === 'Na' ? 13 : 18) * (0.5 + 0.5 * k);
+    ctx.globalAlpha = k;
+    ctx.fillStyle = ion.type === 'Na' ? C.sodium : C.chloride;
+    ctx.beginPath(); ctx.arc(ion.x, ion.y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.font = '700 12px ' + getFont('--font-body'); ctx.textAlign = 'center';
+    ctx.fillText(ion.type === 'Na' ? 'Na⁺' : 'Cl⁻', ion.x, ion.y + 4);
+    ctx.globalAlpha = 1;
+  }
+}
+const ionAlpha = (ion, now) => reduceMotion ? 1 : ease((now - ion.born) / 700);
+
+// ---------- small drawing utilities ----------
+function dotted(ctx, color, w) { ctx.setLineDash([1.5, 4.5]); ctx.lineCap = 'round'; ctx.strokeStyle = color; ctx.lineWidth = w; }
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function trim(a, b, ra, rb) { // shorten a line so it starts/ends at atom edges
+  const d = dist(a, b) || 1, ux = (b.x - a.x) / d, uy = (b.y - a.y) / d;
+  return [{ x: a.x + ux * ra, y: a.y + uy * ra }, { x: b.x - ux * rb, y: b.y - uy * rb }];
+}
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function hexToRgb(hex) { const m = hex.replace('#', ''); const n = parseInt(m.length === 3 ? m.split('').map(c => c + c).join('') : m, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function withAlpha(hex, a) { try { const [r, g, b] = hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; } catch (e) { return hex; } }
+function shade(hex, amt) { const [r, g, b] = hexToRgb(hex); const f = v => Math.round(amt < 0 ? v * (1 + amt) : v + (255 - v) * amt); return `rgb(${f(r)},${f(g)},${f(b)})`; }
+const fontCache = {};
+function getFont(token) { return fontCache[token] ||= getComputedStyle(document.documentElement).getPropertyValue(token).trim(); }
+
+/* =====================================================================
+   UI: buttons, status text, explanation, data table, chart
+   ===================================================================== */
+const solutionLabel = () => state.salt === 0 ? 'Fresh water' : `Salt water (${state.salt} scoop${state.salt > 1 ? 's' : ''})`;
+
+function setStatus(html, spill) {
+  const el = $('status'); el.innerHTML = html; el.classList.toggle('spill', !!spill);
+}
+
+function updateUI() {
+  $('dropCount').textContent = state.drops;
+  $('cohesionPct').textContent = Math.round(cohesion() * 100) + '%';
+  $('solutionName').textContent = solutionLabel();
+  $('saltText').textContent = `${state.salt} of 3 scoops`;
+  document.querySelectorAll('#saltDots i').forEach((d, i) => d.classList.toggle('on', i < state.salt));
+  $('btnSalt').disabled = state.salt >= 3;
+  $('btnDrop').disabled = state.spilled;
+  $('btnAuto').disabled = state.spilled;
+  $('btnAuto').textContent = state.auto ? 'Stop dripping' : 'Drip until it spills';
+  $('explainText').innerHTML = explanation();
+}
+
+function explanation() {
+  const adhesion = 'Water sticks to the copper penny (<b>adhesion</b>), so the first drops spread out to the edge. ';
+  if (state.salt === 0) {
+    return adhesion + 'After that, the water piles up into a dome. Each water molecule forms <b>hydrogen bonds</b> (dashed lines) with the molecules around it. ' +
+      'This pull between water molecules is <b>cohesion</b>. At the surface, cohesion acts like a stretchy skin that holds the dome up until it gets too big and spills.';
+  }
+  return adhesion + `You added ${state.salt} scoop${state.salt > 1 ? 's' : ''} of salt. Salt (NaCl) splits into <b>Na⁺</b> and <b>Cl⁻</b> ions in water. ` +
+    'Water molecules turn to hold on to the ions: the O side (δ−) faces Na⁺, and an H side (δ+) faces Cl⁻. ' +
+    'Those water molecules are busy with ions, so they form fewer hydrogen bonds with each other. In this model, less cohesion means a smaller dome and fewer drops. ' +
+    (state.salt < 3 ? 'Add more salt and compare.' : 'This is the most salt the model allows.');
+}
+
+function renderData() {
+  const tb = $('tbody');
+  if (!state.trials.length) {
+    tb.innerHTML = '<tr><td colspan="3" class="empty">No trials yet. Your results appear here when the penny spills.</td></tr>';
+  } else {
+    tb.innerHTML = state.trials.map((r, i) => `<tr><td class="num">${i + 1}</td><td class="num">${r.salt}</td><td class="num">${r.drops}</td></tr>`).join('');
+    tb.parentElement.parentElement.scrollTop = 1e6;
+  }
+  drawChart();
+}
+
+function drawChart() {
+  const svg = $('chart'), x0 = 52, y0 = 220, ch = 190, bw = 70, gap = 34, max = 50;
+  let s = '';
+  for (let v = 0; v <= max; v += 10) {
+    const y = y0 - v / max * ch;
+    s += `<line x1="${x0}" x2="470" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`;
+    s += `<text x="${x0 - 8}" y="${y + 4}" text-anchor="end">${v}</text>`;
+  }
+  for (let k = 0; k <= 3; k++) {
+    const rows = state.trials.filter(r => r.salt === k);
+    const x = x0 + gap / 2 + k * (bw + gap) + 6;
+    if (rows.length) {
+      const avg = rows.reduce((a, r) => a + r.drops, 0) / rows.length;
+      const h = avg / max * ch;
+      s += `<rect x="${x}" y="${y0 - h}" width="${bw}" height="${h}" rx="4" fill="var(--water)"/>`;
+      s += `<text class="val" x="${x + bw / 2}" y="${y0 - h - 8}" text-anchor="middle">${avg.toFixed(1)}</text>`;
+    } else {
+      s += `<text x="${x + bw / 2}" y="${y0 - 8}" text-anchor="middle">no data</text>`;
+    }
+    s += `<text x="${x + bw / 2}" y="${y0 + 18}" text-anchor="middle">${k} scoop${k === 1 ? '' : 's'}</text>`;
+    s += `<text x="${x + bw / 2}" y="${y0 + 34}" text-anchor="middle">n = ${rows.length}</text>`;
+  }
+  s += `<line x1="${x0}" x2="470" y1="${y0}" y2="${y0}" stroke="var(--muted)" stroke-width="1.5"/>`;
+  svg.innerHTML = s;
+}
+
+// ---------- Button wiring ----------
+function changeSolution(newSalt) {
+  const now = performance.now();
+  const hadWater = state.drops > 0;
+  if (newSalt > state.salt) {
+    for (let i = 0; i < 10; i++) state.crystals.push({ x: BEAKER.x + 14 + Math.random() * 42, y: BEAKER.y - 30 - Math.random() * 30, t0: now + i * 40 });
+  }
+  state.salt = newSalt;
+  placeIons(molTime);
+  newTrial();
+  setStatus(`Solution is now <b>${solutionLabel().toLowerCase()}</b>.` + (hadWater ? ' The penny was wiped dry.' : '') + ' Start a new trial.');
+}
+$('btnSalt').onclick = () => { if (state.salt < 3) changeSolution(state.salt + 1); };
+$('btnFresh').onclick = () => changeSolution(0);
+$('btnDrop').onclick = () => { state.auto = false; startDrop(); updateUI(); };
+$('btnAuto').onclick = () => {
+  state.auto = !state.auto; updateUI();
+  if (state.auto) setStatus(`Dripping ${solutionLabel().toLowerCase()} onto the penny. Watch the dome grow.`);
+};
+$('btnWipe').onclick = () => { newTrial(); setStatus(`Penny wiped dry. Ready for Trial ${state.trials.length + 1} with ${solutionLabel().toLowerCase()}.`); };
+document.querySelectorAll('.speed').forEach(b => b.onclick = () => {
+  state.speed = b.dataset.speed;
+  document.querySelectorAll('.speed').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+});
+$('btnPause').onclick = e => { state.paused = !state.paused; e.currentTarget.setAttribute('aria-pressed', String(state.paused)); e.currentTarget.textContent = state.paused ? 'Resume motion' : 'Pause motion'; };
+$('btnCharges').onclick = e => { state.charges = !state.charges; e.currentTarget.setAttribute('aria-pressed', String(state.charges)); };
+// Two-step clear (pop-up confirm dialogs don't work here)
+let clearArmed = null;
+$('btnClear').onclick = e => {
+  const btn = e.currentTarget;
+  if (!clearArmed) { btn.textContent = 'Tap again to clear'; clearArmed = setTimeout(() => { btn.textContent = 'Clear data'; clearArmed = null; }, 3000); return; }
+  clearTimeout(clearArmed); clearArmed = null; btn.textContent = 'Clear data';
+  state.trials = []; saveTrials(); renderData();
+  setStatus('Data cleared. Start again with Trial 1.');
+};
+
+// ---------- Main loop ----------
+let last = performance.now(), molTime = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  stepDrop(now, dt);
+  if (!state.paused) { molTime += dt * 1000; stepMolecules(molTime, dt); }
+  drawBench(now);
+  drawMolecules(molTime);
+  requestAnimationFrame(frame);
+}
+placeIons(0);
+newTrial();
+renderData();
+requestAnimationFrame(frame);
+</script>
