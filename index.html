@@ -181,7 +181,7 @@ details[open] summary { margin-bottom: 12px; }
     </div>
   </section>
 
-  <section id="closeup" class="view closeup" aria-label="Closer zoom" hidden>
+  <section id="closeup" class="view closeup" aria-label="Closer zoom">
     <div class="view-head"><h2>Closer zoom: one water molecule</h2><button id="cuClose" class="ghost" type="button">Close</button></div>
     <div class="cu-steps" role="group" aria-label="Jump to a step">
       <button class="ghost cu-jump" data-step="0" type="button">1 · One molecule</button>
@@ -1216,12 +1216,12 @@ requestAnimationFrame(frame);
 
   function open() {
     $('closeup').hidden = false;
-    go(0, true);
+    ensureRunning();
     // jump down to the close-up panel (plain scroll works in every viewer)
     const y = $('closeup').getBoundingClientRect().top + window.scrollY - 12;
     try { window.scrollTo({ top: y, behavior: reduceMotion ? 'auto' : 'smooth' }); } catch (e) { window.scrollTo(0, y); }
   }
-  function close() { $('closeup').hidden = true; running = false; }
+  function close() { $('closeup').hidden = true; } // the loop keeps going; it skips drawing while hidden
 
   document.querySelectorAll('.openCU').forEach(b => b.onclick = open);
   $('cuClose').onclick = close;
@@ -1229,8 +1229,7 @@ requestAnimationFrame(frame);
   $('cuBack').onclick = () => go(step - 1, false);
   $('cuReplay').onclick = () => go(step, true);
   document.querySelectorAll('.cu-jump').forEach(b => b.onclick = () => go(+b.dataset.step, true));
-  // If the panel is already showing when the page loads (for example after the page updates
-  // while open), draw it right away instead of leaving it blank.
-  if (!$('closeup').hidden) go(0, true);
+  // The close-up is visible from the start: show step 1 and start drawing right away.
+  go(0, true);
 })();
 </script>
