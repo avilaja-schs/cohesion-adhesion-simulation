@@ -161,7 +161,7 @@ details[open] summary { margin-bottom: 12px; }
       </div>
     </div>
     <div class="view">
-      <div class="view-head"><h2>Molecule zoom</h2><button class="ghost openCU" type="button">Zoom in closer</button></div>
+      <div class="view-head"><h2>Molecule zoom</h2><button class="openCU" type="button">Zoom in closer: one molecule</button></div>
       <p class="small">Edge of the dome, touching the penny.</p>
       <canvas id="mol" aria-label="Ball-and-stick water molecules with hydrogen bonds. Salt ions appear when salt is added."></canvas>
       <div class="stats">
@@ -191,7 +191,7 @@ details[open] summary { margin-bottom: 12px; }
       <button class="ghost cu-jump" data-step="4" type="button">5 · Adhesion</button>
     </div>
     <div class="cu-body">
-      <svg id="cuSvg" viewBox="0 0 640 420" role="img" aria-labelledby="cuTitle"></svg>
+      <canvas id="cuSvg" role="img" aria-labelledby="cuTitle"></canvas>
       <div class="cu-text">
         <h3 id="cuTitle"></h3>
         <p id="cuCaption" aria-live="polite"></p>
@@ -902,7 +902,6 @@ requestAnimationFrame(frame);
    Every value in `cur` eases toward the step's target values in `tgt`.
    ===================================================================== */
 (function () {
-  const svg = $('cuSvg');
   const D = Math.PI / 180;
   const HALF_DEG = 52.25;              // half of 104.5°
   const BOND = 80;                     // O–H length at scale 1 (drawn longer than real so electrons are visible)
@@ -1011,6 +1010,97 @@ requestAnimationFrame(frame);
     return out;
   }
 
+  // ---- paint the scene onto a canvas ----
+  // The scene is described as SVG text (easy to read and edit), then painted onto a
+  // <canvas> the same way the two main views are drawn. Canvas drawing works in every
+  // viewer, including ones that block SVG inserted with innerHTML.
+  function paintSvg(markup) {
+    const cv = $('cuSvg'); if (!cv) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientWidth * dpr * 420 / 640);
+    if (!w) return;
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(w / 640, 0, 0, h / 420, 0, 0);
+    ctx.clearRect(0, 0, 640, 420);
+    const doc = new DOMParser().parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + markup + '</svg>', 'image/svg+xml');
+    const root = doc.documentElement;
+    if (root.nodeName === 'parsererror' || root.querySelector('parsererror')) return;
+    const css = getComputedStyle(document.documentElement);
+    const font = getFont('--font-body');
+    const color = v => {
+      if (!v || v === 'none') return null;
+      const m = v.match(/var\((--[\w-]+)\)/);
+      return m ? css.getPropertyValue(m[1]).trim() : v;
+    };
+    const attr = (el, k, d) => el.hasAttribute(k) ? el.getAttribute(k) : d;
+    const styleFill = el => { const m = (el.getAttribute('style') || '').match(/fill:\s*([^;]+)/); return m ? m[1].trim() : null; };
+    const num = (el, k, d = 0) => parseFloat(attr(el, k, d));
+
+    function glow(x, y, r, col, a) { // radial "electron crowding" glow
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, withAlpha(col, a)); g.addColorStop(1, withAlpha(col, 0));
+      return g;
+    }
+    function fillOf(el, cx, cy, r) {
+      const f = attr(el, 'fill', null);
+      if (f === 'url(#gNeg)') return glow(cx, cy, r, css.getPropertyValue('--oxygen').trim(), 0.45);
+      if (f === 'url(#gPos)') return glow(cx, cy, r, css.getPropertyValue('--hbond').trim(), 0.35);
+      return color(f);
+    }
+
+    function draw(el, alpha) {
+      const tag = el.nodeName;
+      if (tag === 'defs') return;
+      const a = alpha * num(el, 'opacity', 1);
+      if (a <= 0.005) return;
+      ctx.save(); ctx.globalAlpha = a;
+      if (tag === 'circle') {
+        const cx = num(el, 'cx'), cy = num(el, 'cy'), r = num(el, 'r');
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        const f = fillOf(el, cx, cy, r); if (f) { ctx.fillStyle = f; ctx.fill(); }
+        const s = color(attr(el, 'stroke', null)); if (s) { ctx.strokeStyle = s; ctx.lineWidth = num(el, 'stroke-width', 1); ctx.stroke(); }
+      } else if (tag === 'rect') {
+        ctx.fillStyle = color(attr(el, 'fill', '#000'));
+        ctx.fillRect(num(el, 'x'), num(el, 'y'), num(el, 'width'), num(el, 'height'));
+      } else if (tag === 'line') {
+        const x1 = num(el, 'x1'), y1 = num(el, 'y1'), x2 = num(el, 'x2'), y2 = num(el, 'y2');
+        const s = color(attr(el, 'stroke', null));
+        ctx.strokeStyle = s; ctx.lineWidth = num(el, 'stroke-width', 1);
+        ctx.lineCap = attr(el, 'stroke-linecap', 'butt');
+        const dash = attr(el, 'stroke-dasharray', null);
+        ctx.setLineDash(dash ? dash.split(/[ ,]+/).map(Number) : []);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        if (attr(el, 'marker-end', null)) { // arrowhead
+          const ang = Math.atan2(y2 - y1, x2 - x1), L = 14;
+          ctx.setLineDash([]); ctx.fillStyle = color('var(--electron)');
+          ctx.beginPath(); ctx.moveTo(x2 + Math.cos(ang) * 4, y2 + Math.sin(ang) * 4);
+          ctx.lineTo(x2 - L * Math.cos(ang - 0.5), y2 - L * Math.sin(ang - 0.5));
+          ctx.lineTo(x2 - L * Math.cos(ang + 0.5), y2 - L * Math.sin(ang + 0.5));
+          ctx.closePath(); ctx.fill();
+        }
+      } else if (tag === 'text') {
+        const cls = attr(el, 'class', '');
+        let fill = color(styleFill(el)) || 'var(--ink)';
+        let size = num(el, 'font-size', 16), weight = attr(el, 'font-weight', '400');
+        if (/\bneg\b/.test(cls)) { fill = 'var(--oxygen)'; weight = '700'; }
+        if (/\bpos\b/.test(cls)) { fill = 'var(--hbond)'; weight = '700'; }
+        if (/\bnote\b/.test(cls)) { fill = styleFill(el) ? fill : 'var(--muted)'; }
+        if (/\batom-label\b/.test(cls)) weight = '700';
+        ctx.fillStyle = color(fill);
+        ctx.font = `${weight} ${size}px ${font}`;
+        const anchor = attr(el, 'text-anchor', /atom-label/.test(cls) ? 'middle' : 'start');
+        ctx.textAlign = anchor === 'middle' ? 'center' : anchor === 'end' ? 'right' : 'left';
+        ctx.textBaseline = attr(el, 'dominant-baseline', /atom-label/.test(cls) ? 'central' : '') === 'central' ? 'middle' : 'alphabetic';
+        ctx.fillText(el.textContent, num(el, 'x'), num(el, 'y'));
+      } else if (tag === 'g') {
+        for (const c of el.children) draw(c, a);
+      }
+      ctx.restore();
+    }
+    for (const c of root.children) draw(c, 1);
+  }
+
   // ---- draw the whole scene ----
   function render() {
     const c = cur;
@@ -1090,7 +1180,7 @@ requestAnimationFrame(frame);
       </g>`;
       if (step >= 2) out += `<text x="320" y="36" text-anchor="middle" font-size="16" class="note" opacity="${f1(c.charges)}">Shared electrons spend more time near oxygen → oxygen is partially negative.</text>`;
     }
-    svg.innerHTML = out;
+    paintSvg(out);
   }
 
   // ---- animation loop (runs only while the panel is open) ----
@@ -1114,13 +1204,22 @@ requestAnimationFrame(frame);
     $('cuBack').disabled = step === 0;
     $('cuNext').disabled = step === STEPS.length - 1;
     document.querySelectorAll('.cu-jump').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.step === step)));
+    ensureRunning(); // always make sure the drawing loop is on when a step is shown
+    render();
+  }
+
+  // Start the drawing loop if it isn't already running
+  function ensureRunning() {
+    if (running) return;
+    running = true; last = performance.now(); requestAnimationFrame(tick);
   }
 
   function open() {
     $('closeup').hidden = false;
     go(0, true);
-    if (!running) { running = true; last = performance.now(); requestAnimationFrame(tick); }
-    $('closeup').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    // jump down to the close-up panel (plain scroll works in every viewer)
+    const y = $('closeup').getBoundingClientRect().top + window.scrollY - 12;
+    try { window.scrollTo({ top: y, behavior: reduceMotion ? 'auto' : 'smooth' }); } catch (e) { window.scrollTo(0, y); }
   }
   function close() { $('closeup').hidden = true; running = false; }
 
@@ -1130,5 +1229,8 @@ requestAnimationFrame(frame);
   $('cuBack').onclick = () => go(step - 1, false);
   $('cuReplay').onclick = () => go(step, true);
   document.querySelectorAll('.cu-jump').forEach(b => b.onclick = () => go(+b.dataset.step, true));
+  // If the panel is already showing when the page loads (for example after the page updates
+  // while open), draw it right away instead of leaving it blank.
+  if (!$('closeup').hidden) go(0, true);
 })();
 </script>
