@@ -171,7 +171,7 @@ details[open] summary { margin-bottom: 12px; }
       <div class="legend" aria-label="Legend">
         <span><svg width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="7" fill="var(--oxygen)"/></svg>Oxygen (O)</span>
         <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="var(--hydrogen)" stroke="var(--hstroke)" stroke-width="1.5"/></svg>Hydrogen (H)</span>
-        <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--covalent)" stroke-width="3.5"/></svg>Polar covalent bond (unequal sharing of electrons)</span>
+        <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--covalent)" stroke-width="3.5"/></svg>Polar covalent bond (electrons shared unequally)</span>
         <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--hbond)" stroke-width="2.5" stroke-dasharray="5 4"/></svg>Hydrogen bond (cohesion)</span>
         <span><svg width="30" height="10" aria-hidden="true"><line x1="2" y1="5" x2="28" y2="5" stroke="var(--copper)" stroke-width="2.5" stroke-dasharray="1.5 4" stroke-linecap="round"/></svg>Water sticks to penny (adhesion)</span>
         <span><svg width="18" height="18" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="var(--sodium)"/></svg>Na⁺</span>
@@ -234,7 +234,6 @@ details[open] summary { margin-bottom: 12px; }
         <button id="btnPause" class="ghost" aria-pressed="false" type="button">Pause motion</button>
         <button id="btnCharges" class="ghost" aria-pressed="false" type="button">Show + and − charges</button>
       </div>
-      <div class="row"><button class="openCU" type="button">Zoom in to one molecule</button></div>
       <p class="small">These are partial charges. O is partially negative (−). Each H is partially positive (+).</p>
     </div>
   </section>
@@ -266,7 +265,7 @@ details[open] summary { margin-bottom: 12px; }
       <div class="card"><b>Cohesion</b><em>cohesión</em><p>Water molecules sticking to <u>other water molecules</u>.</p></div>
       <div class="card"><b>Adhesion</b><em>adhesión</em><p>Water sticking to a <u>different</u> material, like the penny.</p></div>
       <div class="card"><b>Hydrogen bond</b><em>puente de hidrógeno</em><p>A weak pull between the H (+) of one water molecule and the O (−) of another. Dashed line.</p></div>
-      <div class="card"><b>Polar covalent bond</b><em>enlace covalente polar</em><p>A strong bond inside one water molecule. O and H share electrons unequally. Solid line.</p></div>
+      <div class="card"><b>Polar covalent bond</b><em>enlace covalente polar</em><p>A strong bond inside one water molecule. Electrons are shared unequally between O and H. Solid line.</p></div>
       <div class="card"><b>Ion</b><em>ion</em><p>An atom with a charge. Salt (NaCl) splits into Na⁺ and Cl⁻ ions in water.</p></div>
       <div class="card"><b>Surface tension</b><em>tensión superficial</em><p>Cohesion at the surface makes water act like a stretchy skin. It holds the dome up.</p></div>
     </div>
@@ -896,7 +895,7 @@ requestAnimationFrame(frame);
    CLOSER ZOOM: one water molecule, step by step
    Step 0  one molecule, electrons shared (shown evenly to start)
    Step 1  oxygen pulls the shared electrons closer
-   Step 2  that uneven sharing makes − (O) and + (H)
+   Step 2  electrons shared unequally make − (O) and + (H)
    Step 3  a second molecule arrives: hydrogen bond = cohesion
    Step 4  a glass surface arrives: water sticks to it = adhesion
    Drawn as SVG (crisp labels) and re-rendered each frame while open.
@@ -912,14 +911,14 @@ requestAnimationFrame(frame);
 
   const STEPS = [
     { title: 'One water molecule (H₂O)',
-      text: 'Water has 1 oxygen atom (O) and 2 hydrogen atoms (H). Each line is a covalent bond. In a covalent bond, two atoms share a pair of electrons (e⁻). Here the electrons are drawn halfway, as if the sharing were equal.',
+      text: 'Water has 1 oxygen atom (O) and 2 hydrogen atoms (H). Each line is a polar covalent bond. O and H share a pair of electrons (e⁻), but the electrons are shared unequally. The electrons start halfway here. Press Next to see where they go.',
       key: ['Red ball = oxygen (O)', 'White ball = hydrogen (H)', 'Gold dots = shared electrons (e⁻)'] },
     { title: 'Oxygen pulls harder',
-      text: 'Oxygen pulls on electrons much harder than hydrogen does. Scientists say oxygen is more electronegative. Watch the shared electrons move closer to O. They spend more of their time near oxygen. This is unequal sharing of electrons.',
+      text: 'Oxygen pulls on electrons much harder than hydrogen does. Scientists say oxygen is more electronegative. Watch the shared electrons move closer to O. They spend more of their time near oxygen. The electrons are shared unequally.',
       key: ['Oxygen has 8 protons pulling on electrons. Hydrogen has 1.', 'The arrows show the pull toward O.'] },
-    { title: 'Uneven sharing makes charges',
-      text: 'Electrons are negative. More electron time near O makes the O side partially negative (−). The H sides get less electron time, so they are partially positive (+). Unequal sharing like this is a polar covalent bond.',
-      key: ['The + and − on water are partial charges.', 'They are small charges, not full charges like Na⁺ or Cl⁻.', 'Polar covalent bond = unequal sharing of electrons.', 'Polar = having a negative end and a positive end.'] },
+    { title: 'Electrons shared unequally make charges',
+      text: 'Electrons are negative. More electron time near O makes the O side partially negative (−). The H sides get less electron time, so they are partially positive (+). Electrons shared unequally make this a polar covalent bond.',
+      key: ['The + and − on water are partial charges.', 'They are small charges, not full charges like Na⁺ or Cl⁻.', 'Polar covalent bond = electrons shared unequally.', 'Polar = having a negative end and a positive end.'] },
     { title: 'Two molecules: cohesion',
       text: 'Here comes a second water molecule. Opposites attract: the H (+) of one molecule is pulled toward the O (−) of the other. This attraction is a hydrogen bond, drawn as a dashed line. Water sticking to water is cohesion.',
       key: ['Solid line = polar covalent bond (inside one molecule, strong)', 'Dashed line = hydrogen bond (between molecules, weaker)', 'Cohesion holds the dome together on the penny.'] },
@@ -1077,11 +1076,11 @@ requestAnimationFrame(frame);
     // labels for the single big molecule
     if (c.labels > 0.01) {
       const mid = lerp(A.O, A.H[1], 0.5);
-      const name = step >= 2 ? 'polar covalent bond' : 'covalent bond (shared electrons)';
+      const name = 'polar covalent bond';
       out += `<g opacity="${f1(c.labels)}">
         <line x1="120" y1="142" x2="${f1(mid.x - 4)}" y2="${f1(mid.y - 4)}" stroke="var(--muted)" stroke-width="1.5"/>
         <text x="24" y="112" font-size="17" font-weight="700">${name}</text>
-        ${step >= 1 ? `<text x="24" y="132" font-size="15" class="note">${step >= 2 ? '= unequal sharing of electrons' : 'electrons are shared unequally'}</text>` : ''}
+        <text x="24" y="132" font-size="15" class="note">= electrons shared unequally</text>
         <text x="470" y="184" font-size="15" class="note">shared electrons (e⁻)</text>
         <line x1="466" y1="180" x2="${f1(lerp(A.H[0], A.O, 0.55).x + 14)}" y2="${f1(lerp(A.H[0], A.O, 0.55).y - 10)}" stroke="var(--muted)" stroke-width="1.5"/>
         <text x="470" y="104" font-size="15" class="note">oxygen</text>
